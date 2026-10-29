@@ -8,12 +8,22 @@ Item {
     property int pageCount: 1
     property bool previousEnabled: false
     property bool nextEnabled: false
+    property bool revealed: false
 
     signal previousRequested()
     signal nextRequested()
 
     implicitWidth: 112
     implicitHeight: 36
+
+    opacity: root.revealed ? 1 : 0
+
+    Behavior on opacity {
+        NumberAnimation {
+            duration: 140
+            easing.type: Easing.OutCubic
+        }
+    }
 
     Rectangle {
         anchors.fill: parent

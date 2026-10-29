@@ -1093,10 +1093,10 @@ Item {
                 height: !root.pinned && root.chaptersOpen ? projectRail.height : 0
             }
             Region {
-                x: board.x + pinnedPager.x * board.scale
-                y: board.y + pinnedPager.y * board.scale
-                width: root.pinned ? pinnedPager.width * board.scale : 0
-                height: root.pinned ? pinnedPager.height * board.scale : 0
+                x: board.x + pinnedPagerZone.x * board.scale
+                y: board.y + pinnedPagerZone.y * board.scale
+                width: root.pinned ? pinnedPagerZone.width * board.scale : 0
+                height: root.pinned ? pinnedPagerZone.height * board.scale : 0
             }
         }
 
@@ -1305,21 +1305,35 @@ Item {
                     }
                 }
 
-                PinnedPager {
-                    id: pinnedPager
+                Item {
+                    id: pinnedPagerZone
 
-                    x: paper.x + paper.width - width - 18
-                    y: paper.y + paper.height - height - 16
+                    x: paper.x + paper.width - width - 10
+                    y: paper.y + paper.height - height - 10
+                    width: 150
+                    height: 74
                     z: 50
-                    rotation: paper.rotation
                     visible: root.pinned
-                    theme: root.theme
-                    currentPage: root.notebook.current + 1
-                    pageCount: root.notebook.sheets.length
-                    previousEnabled: root.notebook.current > 0
-                    nextEnabled: root.notebook.current < root.notebook.sheets.length - 1
-                    onPreviousRequested: root.previousPage()
-                    onNextRequested: root.nextPage()
+
+                    HoverHandler {
+                        id: pinnedPagerHover
+                    }
+
+                    PinnedPager {
+                        id: pinnedPager
+
+                        x: parent.width - width - 8
+                        y: parent.height - height - 8
+                        rotation: paper.rotation
+                        revealed: pinnedPagerHover.hovered
+                        theme: root.theme
+                        currentPage: root.notebook.current + 1
+                        pageCount: root.notebook.sheets.length
+                        previousEnabled: root.notebook.current > 0
+                        nextEnabled: root.notebook.current < root.notebook.sheets.length - 1
+                        onPreviousRequested: root.previousPage()
+                        onNextRequested: root.nextPage()
+                    }
                 }
 
                 ToolIsland {
