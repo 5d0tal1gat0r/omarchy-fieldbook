@@ -342,7 +342,7 @@ test("legacy Field Notes files receive one chapter without changing their sheets
   assert.equal(restored.documents[0].title, "Old page")
 })
 
-test("sheets resize between three sizes without cutting off or rescaling content", () => {
+test("sheets resize between three sizes without cutting off content", () => {
   assert.deepEqual(Model.SIZE_ORDER, ["small", "medium", "large"])
   const medium = Model.createSheet("medium", "dots")
   assert.deepEqual([medium.page, medium.paper], [{ width: 760, height: 560 }, "dots"])
@@ -358,12 +358,15 @@ test("sheets resize between three sizes without cutting off or rescaling content
   assert.equal(Model.nextSize(large), "small")
 
   const inked = Model.addStroke(large, [[10, 10], [900, 700]], 4)
-  assert.equal(Model.setSize(inked, "small"), inked, "ink beyond the smaller sheet refuses the shrink")
-  assert.equal(Model.nextSize(inked), "large", "no smaller size fits, so the size stays")
+  const compact = Model.setSize(inked, "small")
+  assert.notEqual(compact, inked, "shrinking scales content into the smaller sheet")
+  assert.deepEqual(compact.page, { width: 380, height: 280 })
+  assert.deepEqual(compact.objects[0].points, [[3.7, 3.7], [328.8, 257.9]])
+  assert.equal(Model.nextSize(inked), "small")
   const corner = Model.addText(medium, 320, 300, "note") // reaches x = 540, past the small sheet
-  assert.equal(Model.nextSize(Model.setSize(corner, "large")), "medium", "from large, the small sheet is skipped")
-  assert.equal(Model.setSize(corner, "small"), corner)
-  assert.deepEqual(Model.setSize(corner, "large").objects, corner.objects, "content keeps its place and scale")
+  assert.equal(Model.nextSize(Model.setSize(corner, "large")), "small", "from large, the small sheet is available")
+  assert.notEqual(Model.setSize(corner, "small"), corner)
+  assert.deepEqual(Model.setSize(corner, "large").objects, corner.objects, "growing keeps content's place and scale")
 
   const restored = Model.sanitizeNotebook(JSON.parse(Model.serialize([inked, Model.createSheet("small")], 1, {})), 760, 560)
   assert.deepEqual(restored.documents.map(Model.sizeName), ["large", "small"])

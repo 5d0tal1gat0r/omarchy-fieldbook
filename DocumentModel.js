@@ -124,23 +124,67 @@ function fitsSize(document, size) {
     return !!dimensions && extent.width <= dimensions.width && extent.height <= dimensions.height
 }
 
-// Resizes the sheet from its top-left corner. Content keeps its place and scale, so a
-// size it would not fit on is refused (the same document comes back).
+// Resizes the sheet from its top-left corner. Growing keeps content's place and scale;
+// shrinking scales the content proportionally when the smaller page cannot contain it.
+function scaleToSize(document, size) {
+    var dimensions = SIZES[size]
+    var scaleX = dimensions.width / document.page.width
+    var scaleY = dimensions.height / document.page.height
+    var objects = document.objects.map(function(source) {
+        if (source.type === "stroke") {
+            return Object.assign({}, source, {
+                width: clamp(round1(source.width * Math.min(scaleX, scaleY)), 1, 12),
+                points: source.points.map(function(point) {
+                    var moved = point.slice(0, 3)
+                    moved[0] = round1(point[0] * scaleX)
+                    moved[1] = round1(point[1] * scaleY)
+                    return moved
+                })
+            })
+        }
+        if (["text", "sticky", "image"].indexOf(source.type) >= 0) {
+            var scaled = Object.assign({}, source, {
+                x: round1(source.x * scaleX),
+                y: round1(source.y * scaleY),
+                width: Math.round(source.width * scaleX),
+                height: Math.round(source.height * scaleY)
+            })
+            if (source.type === "text") {
+                scaled.width = Math.max(40, scaled.width)
+                scaled.height = Math.max(20, scaled.height)
+            } else if (source.type === "sticky") {
+                scaled.width = Math.max(120, scaled.width)
+                scaled.height = Math.max(80, scaled.height)
+            } else if (source.type === "image") {
+                scaled.width = Math.max(64, scaled.width)
+                scaled.height = Math.max(64, scaled.height)
+            }
+            scaled.x = clamp(scaled.x, 0, Math.max(0, dimensions.width - scaled.width))
+            scaled.y = clamp(scaled.y, 0, Math.max(0, dimensions.height - scaled.height))
+            if (source.size !== undefined)
+                scaled.size = Math.max(8, round1(source.size * Math.min(scaleX, scaleY)))
+            return scaled
+        }
+        return source
+    })
+    return Object.assign({}, document, {
+        page: { width: dimensions.width, height: dimensions.height },
+        objects: objects
+    })
+}
+
 function setSize(document, size) {
-    if (!SIZES[size] || size === sizeName(document) || !fitsSize(document, size))
+    if (!SIZES[size] || size === sizeName(document))
         return document
+    if (!fitsSize(document, size) && SIZES[size].width < document.page.width)
+        return scaleToSize(document, size)
     return Object.assign({}, document, { page: { width: SIZES[size].width, height: SIZES[size].height } })
 }
 
-// The next size in order that the sheet's content fits on, or the current size if none.
+// The next size in the cycle. setSize handles proportional shrinking when needed.
 function nextSize(document) {
     var current = SIZE_ORDER.indexOf(sizeName(document))
-    for (var step = 1; step < SIZE_ORDER.length; step++) {
-        var size = SIZE_ORDER[(current + step) % SIZE_ORDER.length]
-        if (fitsSize(document, size))
-            return size
-    }
-    return SIZE_ORDER[current]
+    return SIZE_ORDER[(current + 1) % SIZE_ORDER.length]
 }
 
 function nextPaper(paper) {

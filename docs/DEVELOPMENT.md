@@ -43,7 +43,8 @@ shares untouched objects with the old one, and an edit that changes nothing retu
 document. That makes undo cheap (history stores references, not copies) and lets the
 panel skip saves and undo steps for no-op edits. All notebook changes go through
 `Panel.setNotebook()`, which also keeps the paper in place on screen when the open sheet's
-size changes.
+size changes. Shrinking a page scales its content proportionally when needed so the small
+page never clips existing drawings or notes; growing leaves content at its authored scale.
 
 **Gestures are one undo step.** `PaperSurface` keeps an uncommitted `draftDocument` while
 an erase drag, a move or a new note is in progress, and commits it once when the gesture
