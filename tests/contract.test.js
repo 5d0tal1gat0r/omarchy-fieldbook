@@ -407,7 +407,7 @@ test("sheets are renamed in place from the header and the version prints in the 
   assert.match(paper, /"v" \+ root\.version/)
 })
 
-test("sheets come in three sizes, changed from the header or S, without moving the paper", () => {
+test("sheets come in four sizes, changed from the header or S, without moving the paper", () => {
   const panel = read("Panel.qml")
   const paper = read("PaperSurface.qml")
   assert.match(paper, /HeaderLabel\s*\{\s*id: sizeLabel[\s\S]*?action: "Change size"\s*shortcut: "S"[\s\S]*?onActivated: root\.sizeRequested\(\)/)

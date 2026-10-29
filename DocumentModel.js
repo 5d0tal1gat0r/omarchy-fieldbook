@@ -14,11 +14,12 @@ var TOOLBAR_SIDES = ["right", "left", "top", "bottom"]
 var PAPERS = ["graph", "dots", "ruled", "plain"]
 // Sheet sizes, smallest first; all share the medium sheet's proportions.
 var SIZES = {
+    tiny: { width: 360, height: 264 },
     small: { width: 520, height: 380 },
     medium: { width: 760, height: 560 },
     large: { width: 1040, height: 760 }
 }
-var SIZE_ORDER = ["small", "medium", "large"]
+var SIZE_ORDER = ["tiny", "small", "medium", "large"]
 // User settings and the values each one accepts. The first value is the default, which
 // matches how Field Notes behaves with no settings saved.
 var SETTING_CHOICES = {
