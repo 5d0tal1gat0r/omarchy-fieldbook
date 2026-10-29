@@ -14,6 +14,8 @@ Item {
     property var shell: null
     property var manifest: null
     property bool opened: false
+    // Pinned pages stay visible on the desktop while the editor chrome is hidden.
+    property bool pinned: false
     property bool closingFromHost: false
     // Whether the board has a place on the screen it is shown on (else it is centred there).
     property bool positionInitialized: false
@@ -551,12 +553,17 @@ Item {
         }
         var screen = (DocumentModel.isScreenName(payload.screen) ? screenNamed(payload.screen) : null) || focusedScreen()
         if (opened && payload.toggle === true && screen === targetScreen) {
+            if (pinned) {
+                unpinPage()
+                return
+            }
             // Not from inside the shell's summon: let it finish first.
             Qt.callLater(requestClose)
             return
         }
         showOn(screen)
         closingFromHost = false
+        pinned = false
         opened = true
         Qt.callLater(function() {
             root.ensureBoardPosition()
@@ -570,10 +577,25 @@ Item {
     function close() {
         closingFromHost = true
         settingsOpen = false
+        pinned = false
         focusKeys()
         opened = false
         flushSave()
         closingFromHost = false
+    }
+
+    function pinPage() {
+        leaveSheet()
+        settingsOpen = false
+        pinned = true
+        opened = true
+        flushSave()
+    }
+
+    function unpinPage() {
+        pinned = false
+        opened = true
+        Qt.callLater(focusKeys)
     }
 
     function requestClose() {
@@ -591,6 +613,7 @@ Item {
         })
         return {
             open: opened,
+            pinned: pinned,
             screen: targetScreen ? targetScreen.name : "",
             screens: Quickshell.screens.map(function(screen) { return screen.name }),
             sheet: notebook.current + 1,
@@ -734,6 +757,24 @@ Item {
         }
 
         function toggle(): string { return root.opened ? close() : open() }
+
+        function pin(): string {
+            root.pinPage()
+            return "ok"
+        }
+
+        function unpin(): string {
+            root.unpinPage()
+            return "ok"
+        }
+
+        function togglePin(): string {
+            if (root.pinned)
+                root.unpinPage()
+            else
+                root.pinPage()
+            return "ok"
+        }
 
         function newSheet(): string {
             if (root.notebook.sheets.length >= DocumentModel.MAX_SHEETS)
@@ -973,8 +1014,8 @@ Item {
         exclusionMode: ExclusionMode.Ignore
 
         WlrLayershell.namespace: "io.github.5d0tal1gat0r.fieldbook"
-        WlrLayershell.layer: WlrLayer.Top
-        WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        WlrLayershell.layer: root.pinned ? WlrLayer.Bottom : WlrLayer.Top
+        WlrLayershell.keyboardFocus: root.opened && !root.pinned ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
         anchors {
             top: true
@@ -987,31 +1028,31 @@ Item {
             Region {
                 x: board.x + (paper.x - 24) * board.scale
                 y: board.y + (paper.y - 28) * board.scale
-                width: (paper.width + 48) * board.scale
+                width: root.pinned ? 0 : (paper.width + 48) * board.scale
                 height: (paper.height + 56) * board.scale
             }
             Region {
                 x: board.x + (tools.x - 18) * board.scale
                 y: board.y + (tools.y - 18) * board.scale
-                width: (tools.width + 36) * board.scale
+                width: root.pinned ? 0 : (tools.width + 36) * board.scale
                 height: (tools.height + 36) * board.scale
             }
             Region {
                 x: board.x + settingsCard.x * board.scale
                 y: board.y + settingsCard.y * board.scale
-                width: root.settingsOpen ? settingsCard.width * board.scale : 0
+                width: !root.pinned && root.settingsOpen ? settingsCard.width * board.scale : 0
                 height: root.settingsOpen ? settingsCard.height * board.scale : 0
             }
             Region {
                 x: board.x + dragClip.x * board.scale
                 y: board.y + dragClip.y * board.scale
-                width: dragClip.width * board.scale
+                width: root.pinned ? 0 : dragClip.width * board.scale
                 height: dragClip.height * board.scale
             }
             Region {
                 x: projectRail.x
                 y: projectRail.y
-                width: projectRail.width
+                width: root.pinned ? 0 : projectRail.width
                 height: projectRail.height
             }
         }
@@ -1040,6 +1081,7 @@ Item {
                 y: Math.max(16, board.y + 24)
                 width: implicitWidth
                 height: Math.min(board.height, Math.max(240, surface.height - 32))
+                visible: !root.pinned
                 z: 35
                 theme: root.theme
                 projects: root.notebook.projects
@@ -1098,6 +1140,10 @@ Item {
                     return
                 } else if (!control && (event.key === Qt.Key_P || event.key === Qt.Key_B)) {
                     root.selectTool("pen")
+                    event.accepted = true
+                    return
+                } else if (!control && event.key === Qt.Key_D) {
+                    root.pinPage()
                     event.accepted = true
                     return
                 } else if (!control && event.key === Qt.Key_E) {
@@ -1184,12 +1230,14 @@ Item {
                     width: root.currentDocument.page.width
                     height: root.currentDocument.page.height
                     document: root.currentDocument
+                    enabled: !root.pinned
                     currentTool: root.currentTool
                     penWidth: root.penWidth
                     statusText: root.saveStatus
                     tilted: root.settings.tilt
                     mouseSmoothing: root.smoothingStrength[root.settings.smoothing]
                     eraserRadius: root.eraserRadii[root.settings.eraser]
+                    exporting: root.pinned
                     dimmed: root.settingsOpen
                     onDimClicked: root.closeSettings()
                     sheetIndex: root.notebook.current
@@ -1215,6 +1263,7 @@ Item {
 
                     x: root.dockLayout.toolX
                     y: root.dockLayout.toolY
+                    visible: !root.pinned
                     // Topmost on the board, so its tooltips draw over the paper and the clip.
                     z: 30
                     width: implicitWidth
@@ -1242,6 +1291,7 @@ Item {
                         root.selectSheet(index)
                     }
                     onNewSheetRequested: root.addSheet()
+                    onPinRequested: root.pinPage()
                     onStickyRequested: root.addStickyNote()
                     onImageRequested: root.pasteImage()
                     onCopyImageRequested: root.copyImagePath()
@@ -1272,7 +1322,7 @@ Item {
                     maxHeight: root.settingsArea.height
                     opacity: root.settingsOpen ? 1 : 0
                     scale: root.settingsOpen ? 1 : 0.97
-                    visible: opacity > 0
+                    visible: !root.pinned && opacity > 0
                     theme: root.theme
                     settings: root.settings
                     toolbarSide: root.toolbarSide
@@ -1308,6 +1358,7 @@ Item {
 
                 Item {
                     id: dragClip
+                    visible: !root.pinned
 
                     // Centred on the paper's top edge, following its tilt.
                     x: paper.x + Math.round((paper.width - width) / 2 + paper.height / 2 * Math.sin(paper.rotation * Math.PI / 180))

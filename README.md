@@ -43,6 +43,7 @@ Open the bar icon or your keybinding. The paper opens in the foreground; close i
 | Text | Click the page and type | `T` |
 | Sticky note | Add an editable colored note to the page | toolbar |
 | Paste image | Add an image from the Wayland clipboard | toolbar |
+| Pin to desktop | Hide the editor chrome and place the page behind normal windows | `D` |
 | Undo / Redo | Move through page history | `Ctrl+Z` / `Ctrl+Y` |
 | New page | Add a page to the current chapter | `N` |
 | Copy | Export the current page as a PNG | `Ctrl+C` |
@@ -57,6 +58,8 @@ The footer reads `FIELD BOOK v0.2.0` and shows the save status.
 (`Shift` makes larger steps). `Ctrl+Shift+Z` redoes an action.
 `[` and `]` cycle pen width.
 With Select active, `Delete` or `Backspace` removes the selected object.
+Press `D` or use **Pin to desktop** to leave the page on the desktop. Click the bar icon
+again to bring it back into the editor.
 
 ## Sharing
 
@@ -77,7 +80,7 @@ omarchy-shell io.github.5d0tal1gat0r.fieldbook copy path
 ```
 
 The existing Field Notes methods remain available: `status`, `open`, `close`, `toggle`,
-`openOn`, `newSheet`, `selectSheet`, `setTitle`, `setPaper`, `setSize`, `setTool`,
+`pin`, `unpin`, `togglePin`, `openOn`, `newSheet`, `selectSheet`, `setTitle`, `setPaper`, `setSize`, `setTool`,
 `setPenWidth`, `draw`, `stopDrawing`, `addNote`, `undo`, `redo`, `clear`, `center`, and
 `copy`.
 

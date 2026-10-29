@@ -41,13 +41,27 @@ test("entry points expose a movable frameless layer-shell lifecycle", () => {
   assert.doesNotMatch(panel, /visible:\s*root\.opened\s*&&/, "PanelWindow visibility must not depend on its backing screen")
   assert.doesNotMatch(panel, /onVisibleChanged/, "transient layer-surface remaps must not hide the host panel")
   assert.match(panel, /WlrLayershell\.namespace:\s*"io\.github\.5d0tal1gat0r\.fieldbook"/)
-  assert.match(panel, /WlrLayershell\.layer:\s*WlrLayer\.(Top|Overlay)/)
+  assert.match(panel, /WlrLayershell\.layer:\s*root\.pinned \? WlrLayer\.Bottom : WlrLayer\.Top/)
   assert.match(panel, /exclusionMode:\s*ExclusionMode\.Ignore/)
   assert.doesNotMatch(panel, /startSystemMove\s*\(/, "layer surfaces move their scene, not a compositor window")
   assert.match(widget, /shell summon io\.github\.5d0tal1gat0r\.fieldbook/, "the CLI fallback summons the panel")
   assert.match(widget, /BarIconButton\s*\{/)
   assert.match(widget, /fontFamily:\s*"JetBrainsMono Nerd Font"/, "the icon must use the installed Nerd Font rather than the text-only bar font")
   assert.doesNotMatch(widget, /labelVisible:\s*false/, "the bar glyph must actually be rendered")
+})
+
+test("a page can be pinned behind the desktop without editor input", () => {
+  const panel = read("Panel.qml")
+  const tools = read("ToolIsland.qml")
+  assert.match(panel, /property bool pinned: false/)
+  assert.match(panel, /function pinPage\(\)/)
+  assert.match(panel, /WlrLayershell\.layer:\s*root\.pinned \? WlrLayer\.Bottom : WlrLayer\.Top/)
+  assert.match(panel, /keyboardFocus:\s*root\.opened && !root\.pinned \? WlrKeyboardFocus\.OnDemand : WlrKeyboardFocus\.None/)
+  assert.match(panel, /width: root\.pinned \? 0 : \(paper\.width \+ 48\)/)
+  assert.match(panel, /visible: !root\.pinned/)
+  assert.match(panel, /onPinRequested: root\.pinPage\(\)/)
+  assert.match(panel, /event\.key === Qt\.Key_D[\s\S]*?root\.pinPage\(\)/)
+  assert.match(tools, /text: "Pin to desktop"/)
 })
 
 test("base layer composes masked graph paper and a detached tool island", () => {
@@ -134,8 +148,8 @@ test("board scale, input masks and drag bounds use the same coordinate transform
   assert.match(panel, /scale: Layout\.fitScale\(surface\.width, surface\.height, width, height\)/)
   assert.match(panel, /transformOrigin: Item\.TopLeft/)
   for (const name of ["paper", "tools", "dragClip"]) {
-    assert.match(panel, new RegExp(`width: \\(?${name}\\.width[^\\n]*\\* board\\.scale`))
-    assert.match(panel, new RegExp(`height: \\(?${name}\\.height[^\\n]*\\* board\\.scale`))
+    assert.match(panel, new RegExp(`width: (?:root\\.pinned \\? 0 : )?\\(?${name}\\.width[^\\n]*\\* board\\.scale`))
+    assert.match(panel, new RegExp(`height: (?:root\\.pinned \\? 0 : )?\\(?${name}\\.height[^\\n]*\\* board\\.scale`))
   }
   assert.match(panel, /xAxis\.maximum:[^\n]*board\.width \* board\.scale/)
   assert.match(panel, /yAxis\.maximum:[^\n]*board\.height \* board\.scale/)
@@ -413,7 +427,7 @@ test("a settings panel opens from the toolbar or Ctrl+, and every setting does s
   assert.match(panel, /control && event\.key === Qt\.Key_Comma\) \{\s*root\.toggleSettings\(\)/)
   assert.match(panel, /if \(root\.settingsOpen\) \{\s*if \(event\.key === Qt\.Key_Escape\)\s*root\.closeSettings\(\)/,
     "while settings are open, Esc closes them and tool shortcuts do nothing")
-  assert.match(panel, /width: root\.settingsOpen \? settingsCard\.width \* board\.scale : 0/, "the card receives clicks")
+  assert.match(panel, /width: (?:!root\.pinned && )?root\.settingsOpen \? settingsCard\.width \* board\.scale : 0/, "the card receives clicks")
   assert.match(panel, /onDimClicked: root\.closeSettings\(\)/)
   assert.match(panel, /function close\(\) \{[\s\S]*?settingsOpen = false/)
   assert.match(panel, /DocumentModel\.serialize\([\s\S]*?\}, settings,?[^)]*\)\)/, "settings are saved with the notes")
@@ -508,7 +522,7 @@ test("the README documents every keyboard shortcut the panel handles", () => {
   const documented = {
     Z: "Ctrl+Z", Y: "Ctrl+Y", C: "Ctrl+C", Comma: "Ctrl+,", F2: "F2", G: "`G`", S: "`S`", N: "`N`",
     PageUp: "PgUp", PageDown: "PgDn", P: "`P`", B: "`B`", E: "`E`", T: "`T`", V: "`V`",
-    BracketLeft: "`[`", BracketRight: "`]`", Left: "arrow keys", Right: "arrow keys", Up: "arrow keys",
+    BracketLeft: "`[`", BracketRight: "`]`", D: "`D`", Left: "arrow keys", Right: "arrow keys", Up: "arrow keys",
     Down: "arrow keys", Home: "`Home`", Delete: "`Delete`", Backspace: "`Backspace`", Escape: "`Esc`"
   }
   const handled = new Set([...panel.matchAll(/Qt\.Key_(\w+)/g)].map(match => match[1]))

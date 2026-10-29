@@ -55,6 +55,7 @@ Item {
     signal penWidthRequested(real width)
     signal sheetRequested(int index)
     signal newSheetRequested()
+    signal pinRequested()
     signal stickyRequested()
     signal imageRequested()
     signal copyImageRequested()
@@ -229,6 +230,12 @@ Item {
             icon: "󰋩"
             shortcut: "I"
             onActivated: root.imageRequested()
+        }
+        Button {
+            text: "Pin to desktop"
+            icon: "󰐃"
+            shortcut: "D"
+            onActivated: root.pinRequested()
         }
 
         Divider {}

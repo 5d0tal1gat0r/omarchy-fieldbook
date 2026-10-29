@@ -1,6 +1,6 @@
-# Developing Field Notes
+# Developing Fieldbook
 
-Field Notes is an Omarchy shell plugin (`jobo.field-notes`) written in QML for Quickshell,
+Fieldbook is an Omarchy shell plugin (`io.github.5d0tal1gat0r.fieldbook`) written in QML for Quickshell,
 with its logic in plain JavaScript modules that run both in QML and in Node for tests. It has
 no build step and no dependencies beyond the shell.
 
@@ -13,6 +13,9 @@ no build step and no dependencies beyond the shell.
 | `BarWidget.qml` | Bar icon: left click toggles the panel, right click summons it at settings |
 | `PaperSurface.qml` | One sheet: paper ruling, ink and wet-ink canvases, notes, pointer tools, header, export capture |
 | `TextNote.qml` | A typed note: display, in-place editing, dragging |
+| `StickyNote.qml` | A colored editable sticky note |
+| `ImageNote.qml` | A pasted local image card |
+| `ProjectRail.qml` | Chapter and page navigation rail |
 | `TitleField.qml` | The sheet title in the header, edited in place |
 | `HeaderLabel.qml` | Clickable header settings (paper type, size) with refusal notices |
 | `BinderClip.qml` | The drawn binder clip handle (vector Shapes) |
@@ -24,14 +27,14 @@ no build step and no dependencies beyond the shell.
 | `ClassicTheme.qml` | Field Notes' own look; same properties as `OmarchyTheme.qml` |
 | `DocumentModel.js` | Sheets, objects, papers, sizes, titles, settings; sanitizing and serializing |
 | `History.js` | Per-sheet undo/redo |
-| `Notebook.js` | The list of sheets and the open one; adding, switching, dropping blank sheets |
+| `Notebook.js` | The list of sheets and chapters; adding, switching, dropping blank sheets |
 | `Geometry.js` | Eraser cuts, hit testing, stroke simplification and mouse smoothing |
 | `Layout.js` | Board scaling, toolbar docking geometry, nearest-side snapping |
 | `tests/` | Node tests: unit tests for the JS modules and contract tests for the QML |
 
 ## How it fits together
 
-**State lives in `Panel.qml`.** It holds the notebook (one undo history per sheet), the
+**State lives in `Panel.qml`.** It holds the notebook (one undo history per page), the
 current tool, pen width, toolbar side, board position and settings. Components below it only
 display what they are given and report what the user did; the panel applies the change.
 
@@ -97,11 +100,11 @@ always passed as arguments, never spliced into a shell command.
 
 ## Saved file
 
-`$XDG_STATE_HOME/field-notes/notes.json` (default `~/.local/state/field-notes/notes.json`):
+`$XDG_STATE_HOME/fieldbook/notes.json` (default `~/.local/state/fieldbook/notes.json`):
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "current": 0,
   "sheets": [
     {
@@ -221,10 +224,10 @@ A harness is a small `Window` that instantiates the component and saves
 Clone the repository and link it into the plugin folder once:
 
 ```sh
-git clone https://github.com/OldJobobo/field-notes.git ~/Projects/field-notes
-ln -s ~/Projects/field-notes ~/.config/omarchy/plugins/jobo.field-notes
+git clone https://github.com/5d0tal1gat0r/omarchy-fieldbook.git ~/Projects/omarchy-fieldbook
+ln -s ~/Projects/omarchy-fieldbook ~/.config/omarchy/plugins/io.github.5d0tal1gat0r.fieldbook
 omarchy-shell shell rescanPlugins
-omarchy plugin enable jobo.field-notes
+omarchy plugin enable io.github.5d0tal1gat0r.fieldbook
 ```
 
 After changing QML, restart the shell with `omarchy-restart-shell`. A rescan reloads the
@@ -232,10 +235,10 @@ entry points, but QML files they use can stay cached, so changes there may not a
 until a restart. Then:
 
 ```sh
-omarchy-shell shell toggle jobo.field-notes '{}'                    # open or close
-omarchy-shell shell summon jobo.field-notes '{"settings":true}'     # open at settings
+omarchy-shell shell toggle io.github.5d0tal1gat0r.fieldbook '{}'                    # open or close
+omarchy-shell shell summon io.github.5d0tal1gat0r.fieldbook '{"settings":true}'     # open at settings
 journalctl --user -t omarchy-shell -f                               # shell log
-omarchy-shell jobo.field-notes status | jq                          # the open sheet, as scripts see it
+omarchy-shell io.github.5d0tal1gat0r.fieldbook status | jq           # the open page, as scripts see it
 ```
 
 The scripting interface (the `IpcHandler` at the end of `Panel.qml`, documented in the
