@@ -26,7 +26,7 @@ Item {
     property var exportRequest: null
     readonly property var paperLabels: ({ graph: "GRAPH 16", dots: "DOTS 16", ruled: "RULED 24", plain: "PLAIN" })
     readonly property string sheetSize: shownDocument && shownDocument.page ? DocumentModel.sizeName(shownDocument) : "medium"
-    readonly property var sizeLabels: ({ tiny: "TINY", small: "SMALL", medium: "MEDIUM", large: "LARGE" })
+    readonly property var sizeLabels: ({ small: "SMALL", medium: "MEDIUM", large: "LARGE" })
     property var document: DocumentModel.createDocument(width, height)
     // Uncommitted result of the gesture in progress (erase drag, stroke move, new note),
     // committed as a single undo step when the gesture ends.

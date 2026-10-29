@@ -342,22 +342,20 @@ test("legacy Field Notes files receive one chapter without changing their sheets
   assert.equal(restored.documents[0].title, "Old page")
 })
 
-test("sheets resize between four sizes without cutting off or rescaling content", () => {
-  assert.deepEqual(Model.SIZE_ORDER, ["tiny", "small", "medium", "large"])
-  const tiny = Model.createSheet("tiny", "dots")
-  assert.deepEqual([tiny.page, tiny.paper], [{ width: 360, height: 264 }, "dots"])
+test("sheets resize between three sizes without cutting off or rescaling content", () => {
+  assert.deepEqual(Model.SIZE_ORDER, ["small", "medium", "large"])
   const medium = Model.createSheet("medium", "dots")
   assert.deepEqual([medium.page, medium.paper], [{ width: 760, height: 560 }, "dots"])
-  assert.equal(Model.sizeName(Model.createSheet("small")), "small")
-  assert.equal(Model.sizeName(Model.createSheet("tiny")), "tiny")
+  const small = Model.createSheet("small", "dots")
+  assert.deepEqual([small.page, small.paper], [{ width: 380, height: 280 }, "dots"])
+  assert.equal(Model.sizeName(small), "small")
   assert.equal(Model.sizeName(Model.createSheet("bogus")), "medium")
 
   const large = Model.setSize(medium, "large")
   assert.deepEqual(large.page, { width: 1040, height: 760 })
   assert.equal(Model.setSize(large, "large"), large, "same size is a no-op")
   assert.equal(Model.nextSize(medium), "large")
-  assert.equal(Model.nextSize(large), "tiny")
-  assert.equal(Model.nextSize(tiny), "small")
+  assert.equal(Model.nextSize(large), "small")
 
   const inked = Model.addStroke(large, [[10, 10], [900, 700]], 4)
   assert.equal(Model.setSize(inked, "small"), inked, "ink beyond the smaller sheet refuses the shrink")

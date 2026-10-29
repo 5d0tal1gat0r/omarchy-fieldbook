@@ -126,7 +126,7 @@ always passed as arguments, never spliced into a shell command.
 }
 ```
 
-- Coordinates are in the sheet's own space: tiny 360×264, small 520×380, medium 760×560, large 1040×760.
+- Coordinates are in the sheet's own space: small 380×280, medium 760×560, large 1040×760.
 - A stroke point is `[x, y]` for fixed width, or `[x, y, pressure]` for pressure input.
   Pressure is a finite number clamped to 0–1 and rounded to three decimal places. Missing
   or malformed pressure keeps legacy strokes fixed-width; within a mixed pressure stroke,

@@ -53,7 +53,7 @@ Open the bar icon or your keybinding. The paper opens in the foreground; close i
 | Close | Put the notebook away | `Esc` |
 
 The paper header lets you rename a page, cycle graph/dots/ruled/plain paper, and cycle
-tiny/small/medium/large sizes. `F2`, `G`, and `S` trigger those actions from the keyboard.
+small/medium/large sizes. `F2`, `G`, and `S` trigger those actions from the keyboard.
 The footer reads `FIELD BOOK v0.2.0` and shows the save status.
 
 `PgUp` and `PgDn` switch pages, `Home` centers the board, and the arrow keys move it
