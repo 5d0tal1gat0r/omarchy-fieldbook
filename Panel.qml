@@ -1092,6 +1092,12 @@ Item {
                 width: !root.pinned && root.chaptersOpen ? projectRail.width : 0
                 height: !root.pinned && root.chaptersOpen ? projectRail.height : 0
             }
+            Region {
+                x: board.x + pinnedPager.x * board.scale
+                y: board.y + pinnedPager.y * board.scale
+                width: root.pinned ? pinnedPager.width * board.scale : 0
+                height: root.pinned ? pinnedPager.height * board.scale : 0
+            }
         }
 
         onWidthChanged: root.ensureBoardPosition()
@@ -1297,6 +1303,23 @@ Item {
                     onToolRequested: function(tool) {
                         root.selectTool(tool)
                     }
+                }
+
+                PinnedPager {
+                    id: pinnedPager
+
+                    x: paper.x + paper.width - width - 18
+                    y: paper.y + paper.height - height - 16
+                    z: 50
+                    rotation: paper.rotation
+                    visible: root.pinned
+                    theme: root.theme
+                    currentPage: root.notebook.current + 1
+                    pageCount: root.notebook.sheets.length
+                    previousEnabled: root.notebook.current > 0
+                    nextEnabled: root.notebook.current < root.notebook.sheets.length - 1
+                    onPreviousRequested: root.previousPage()
+                    onNextRequested: root.nextPage()
                 }
 
                 ToolIsland {

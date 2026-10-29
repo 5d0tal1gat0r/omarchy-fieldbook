@@ -63,6 +63,8 @@ The footer reads `FIELD BOOK v0.2.0` and shows the save status.
 With Select active, `Delete` or `Backspace` removes the selected object.
 Press `D` or use **Pin to desktop** to leave the page on the desktop. Click the bar icon
 again to bring it back into the editor.
+When pinned, the small `‹ 1/3 ›` pager at the bottom-right of the page switches between
+pages without showing the editor tools.
 
 ## Sharing
 
