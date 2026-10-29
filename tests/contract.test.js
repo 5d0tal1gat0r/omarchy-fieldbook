@@ -76,6 +76,17 @@ test("the chapter rail is opt-in and can be toggled from the toolbar or keyboard
   assert.match(tools, /text: root\.chaptersOpen \? "Hide chapters" : "Show chapters"/)
 })
 
+test("pinned pages expose navigation without restoring editor chrome", () => {
+  const panel = read("Panel.qml")
+  const readme = read("README.md")
+  assert.match(panel, /function nextPage\(\)/)
+  assert.match(panel, /function previousPage\(\)/)
+  assert.match(panel, /function nextPage\(\): string[\s\S]*root\.nextPage\(\)/)
+  assert.match(panel, /function previousPage\(\): string[\s\S]*root\.previousPage\(\)/)
+  assert.match(readme, /fieldbook previousPage/)
+  assert.match(readme, /fieldbook nextPage/)
+})
+
 test("base layer composes masked graph paper and a detached tool island", () => {
   const panel = read("Panel.qml")
   const paper = read("PaperSurface.qml")

@@ -155,6 +155,20 @@ Item {
         setNotebook(Notebook.select(notebook, index))
     }
 
+    function nextPage() {
+        if (notebook.current >= notebook.sheets.length - 1)
+            return false
+        selectSheet(notebook.current + 1)
+        return true
+    }
+
+    function previousPage() {
+        if (notebook.current <= 0)
+            return false
+        selectSheet(notebook.current - 1)
+        return true
+    }
+
     function addSheet() {
         leaveSheet()
         // A new sheet starts with the size and paper of the sheet being left.
@@ -803,6 +817,14 @@ Item {
                 return "error: there is no sheet " + number
             root.selectSheet(number - 1)
             return "ok"
+        }
+
+        function nextPage(): string {
+            return root.nextPage() ? "ok" : "error: already on the last page"
+        }
+
+        function previousPage(): string {
+            return root.previousPage() ? "ok" : "error: already on the first page"
         }
 
         function setTitle(title: string): string {

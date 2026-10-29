@@ -83,9 +83,18 @@ omarchy-shell io.github.5d0tal1gat0r.fieldbook copy path
 ```
 
 The existing Field Notes methods remain available: `status`, `open`, `close`, `toggle`,
-`pin`, `unpin`, `togglePin`, `toggleChapters`, `openOn`, `newSheet`, `selectSheet`, `setTitle`, `setPaper`, `setSize`, `setTool`,
+`pin`, `unpin`, `togglePin`, `toggleChapters`, `openOn`, `newSheet`, `selectSheet`, `nextPage`, `previousPage`, `setTitle`, `setPaper`, `setSize`, `setTool`,
 `setPenWidth`, `draw`, `stopDrawing`, `addNote`, `undo`, `redo`, `clear`, `center`, and
 `copy`.
+
+While pinned, navigate without reopening the editor with:
+
+```sh
+omarchy-shell io.github.5d0tal1gat0r.fieldbook previousPage
+omarchy-shell io.github.5d0tal1gat0r.fieldbook nextPage
+```
+
+These commands can also be assigned to global desktop keybindings.
 
 ## Saved data
 
