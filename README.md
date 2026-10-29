@@ -27,6 +27,8 @@ Open the bar icon or your keybinding. The paper opens in the foreground; close i
 `Esc` or the close button and it returns to the desktop without losing the page.
 
 - **Chapters** are the project-level groups in the rail beside the paper.
+- The chapter rail is hidden by default so it does not float beside every page.
+- Press `C` or use **Show chapters** in the toolbar to toggle it.
 - Click **+** beside `CHAPTERS` to create a chapter.
 - Click **+** beside a chapter to create a page inside that chapter.
 - Click a chapter or page to switch to it.
@@ -57,6 +59,7 @@ The footer reads `FIELD BOOK v0.2.0` and shows the save status.
 `PgUp` and `PgDn` switch pages, `Home` centers the board, and the arrow keys move it
 (`Shift` makes larger steps). `Ctrl+Shift+Z` redoes an action.
 `[` and `]` cycle pen width.
+`C` toggles the chapter rail.
 With Select active, `Delete` or `Backspace` removes the selected object.
 Press `D` or use **Pin to desktop** to leave the page on the desktop. Click the bar icon
 again to bring it back into the editor.
@@ -80,7 +83,7 @@ omarchy-shell io.github.5d0tal1gat0r.fieldbook copy path
 ```
 
 The existing Field Notes methods remain available: `status`, `open`, `close`, `toggle`,
-`pin`, `unpin`, `togglePin`, `openOn`, `newSheet`, `selectSheet`, `setTitle`, `setPaper`, `setSize`, `setTool`,
+`pin`, `unpin`, `togglePin`, `toggleChapters`, `openOn`, `newSheet`, `selectSheet`, `setTitle`, `setPaper`, `setSize`, `setTool`,
 `setPenWidth`, `draw`, `stopDrawing`, `addNote`, `undo`, `redo`, `clear`, `center`, and
 `copy`.
 

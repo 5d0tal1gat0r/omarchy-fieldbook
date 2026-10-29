@@ -16,6 +16,8 @@ Item {
     property bool opened: false
     // Pinned pages stay visible on the desktop while the editor chrome is hidden.
     property bool pinned: false
+    // The chapter rail is opt-in so the page stays uncluttered when the notebook opens.
+    property bool chaptersOpen: false
     property bool closingFromHost: false
     // Whether the board has a place on the screen it is shown on (else it is centred there).
     property bool positionInitialized: false
@@ -598,6 +600,13 @@ Item {
         Qt.callLater(focusKeys)
     }
 
+    function toggleChapters() {
+        if (pinned)
+            return
+        chaptersOpen = !chaptersOpen
+        focusKeys()
+    }
+
     function requestClose() {
         if (shell && typeof shell.hide === "function")
             shell.hide("io.github.5d0tal1gat0r.fieldbook")
@@ -614,6 +623,7 @@ Item {
         return {
             open: opened,
             pinned: pinned,
+            chaptersOpen: chaptersOpen,
             screen: targetScreen ? targetScreen.name : "",
             screens: Quickshell.screens.map(function(screen) { return screen.name }),
             sheet: notebook.current + 1,
@@ -773,6 +783,11 @@ Item {
                 root.unpinPage()
             else
                 root.pinPage()
+            return "ok"
+        }
+
+        function toggleChapters(): string {
+            root.toggleChapters()
             return "ok"
         }
 
@@ -1052,8 +1067,8 @@ Item {
             Region {
                 x: projectRail.x
                 y: projectRail.y
-                width: root.pinned ? 0 : projectRail.width
-                height: projectRail.height
+                width: !root.pinned && root.chaptersOpen ? projectRail.width : 0
+                height: !root.pinned && root.chaptersOpen ? projectRail.height : 0
             }
         }
 
@@ -1081,7 +1096,7 @@ Item {
                 y: Math.max(16, board.y + 24)
                 width: implicitWidth
                 height: Math.min(board.height, Math.max(240, surface.height - 32))
-                visible: !root.pinned
+                visible: !root.pinned && root.chaptersOpen
                 z: 35
                 theme: root.theme
                 projects: root.notebook.projects
@@ -1144,6 +1159,10 @@ Item {
                     return
                 } else if (!control && event.key === Qt.Key_D) {
                     root.pinPage()
+                    event.accepted = true
+                    return
+                } else if (!control && event.key === Qt.Key_C) {
+                    root.toggleChapters()
                     event.accepted = true
                     return
                 } else if (!control && event.key === Qt.Key_E) {
@@ -1292,12 +1311,14 @@ Item {
                     }
                     onNewSheetRequested: root.addSheet()
                     onPinRequested: root.pinPage()
+                    onChaptersRequested: root.toggleChapters()
                     onStickyRequested: root.addStickyNote()
                     onImageRequested: root.pasteImage()
                     onCopyImageRequested: root.copyImagePath()
                     onSettingsRequested: root.toggleSettings()
                     copyMode: root.settings.clipboard
                     settingsOpen: root.settingsOpen
+                    chaptersOpen: root.chaptersOpen
                     // The notes' surface holds keyboard focus while you work in them.
                     faded: root.settings.fadeToolbar && !Window.active && !root.settingsOpen
                     onCloseRequested: root.requestClose()

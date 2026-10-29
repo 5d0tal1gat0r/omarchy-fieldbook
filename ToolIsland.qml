@@ -29,6 +29,7 @@ Item {
     property string copyMode: "path"
     property string exportedMode: "path"
     property bool settingsOpen: false
+    property bool chaptersOpen: false
     // Faded away while the notes don't have keyboard focus (the panel decides). Pointing at
     // the toolbar or holding its grip brings it straight back.
     property bool faded: false
@@ -56,6 +57,7 @@ Item {
     signal sheetRequested(int index)
     signal newSheetRequested()
     signal pinRequested()
+    signal chaptersRequested()
     signal stickyRequested()
     signal imageRequested()
     signal copyImageRequested()
@@ -290,6 +292,14 @@ Item {
                 else
                     root.sheetRequested(root.sheetIndex + 1)
             }
+        }
+
+        Button {
+            text: root.chaptersOpen ? "Hide chapters" : "Show chapters"
+            icon: "󰙅"
+            shortcut: "C"
+            selected: root.chaptersOpen
+            onActivated: root.chaptersRequested()
         }
 
         Divider {}

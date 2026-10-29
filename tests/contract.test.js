@@ -64,6 +64,18 @@ test("a page can be pinned behind the desktop without editor input", () => {
   assert.match(tools, /text: "Pin to desktop"/)
 })
 
+test("the chapter rail is opt-in and can be toggled from the toolbar or keyboard", () => {
+  const panel = read("Panel.qml")
+  const tools = read("ToolIsland.qml")
+  assert.match(panel, /property bool chaptersOpen: false/)
+  assert.match(panel, /function toggleChapters\(\)/)
+  assert.match(panel, /width: !root\.pinned && root\.chaptersOpen \? projectRail\.width : 0/)
+  assert.match(panel, /visible: !root\.pinned && root\.chaptersOpen/)
+  assert.match(panel, /event\.key === Qt\.Key_C[\s\S]*?root\.toggleChapters\(\)/)
+  assert.match(panel, /onChaptersRequested: root\.toggleChapters\(\)/)
+  assert.match(tools, /text: root\.chaptersOpen \? "Hide chapters" : "Show chapters"/)
+})
+
 test("base layer composes masked graph paper and a detached tool island", () => {
   const panel = read("Panel.qml")
   const paper = read("PaperSurface.qml")
