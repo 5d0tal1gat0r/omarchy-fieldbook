@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "jobo.field-notes",
-  "name": "Field Notes",
-  "version": "0.1.5",
-  "author": "OldJobobo",
+  "id": "io.github.5d0tal1gat0r.fieldbook",
+  "name": "Fieldbook",
+  "version": "0.2.0",
+  "author": "5d0tal1gat0r",
   "license": "MIT",
-  "description": "A floating notebook for sketches and typed notes, with graph, dot and ruled paper.",
+  "description": "A floating field notebook with chapters, pages, sketches, sticky notes, and images.",
   "kinds": [
     "panel",
     "bar-widget"
@@ -16,8 +16,8 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "Field Notes",
-    "description": "Open the floating graph-paper notebook",
+    "displayName": "Fieldbook",
+    "description": "Open the floating notebook with chapters and pages",
     "category": "Productivity",
     "allowMultiple": false,
     "defaultSection": "right"

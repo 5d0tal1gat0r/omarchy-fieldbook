@@ -67,3 +67,34 @@ test("a titled sheet is kept when left, even with nothing drawn on it", () => {
   assert.equal(Notebook.select(notebook, 0).sheets.length, 2)
   assert.equal(Notebook.canAdd(notebook), true)
 })
+
+test("creates a default chapter with stable page ids", () => {
+  const notebook = Notebook.create([inked()], 0)
+  assert.equal(notebook.projects.length, 1)
+  assert.equal(notebook.projects[0].title, "Field Notes")
+  assert.equal(notebook.pageIds.length, 1)
+  assert.equal(notebook.projects[0].pageIds[0], notebook.pageIds[0])
+  assert.equal(notebook.currentProjectId, notebook.projects[0].id)
+})
+
+test("groups new sheets in the current chapter and can add a chapter", () => {
+  let notebook = Notebook.create([inked()], 0)
+  notebook = Notebook.add(notebook, blank())
+  assert.equal(notebook.projects[0].pageIds.length, 2)
+  assert.equal(notebook.projects[0].pageIds[1], notebook.pageIds[1])
+
+  notebook = Notebook.addProject(notebook, blank(), "Sketches")
+  assert.equal(notebook.projects.length, 2)
+  assert.equal(notebook.projects[1].title, "Sketches")
+  assert.equal(notebook.currentProjectId, notebook.projects[1].id)
+  assert.equal(notebook.projects[1].pageIds.length, 1)
+  assert.equal(notebook.current, 1)
+})
+
+test("selecting a chapter selects its first page", () => {
+  let notebook = Notebook.addProject(Notebook.create([inked()], 0), blank(), "Sketches")
+  const first = notebook.projects[0].id
+  notebook = Notebook.selectProject(notebook, first)
+  assert.equal(notebook.currentProjectId, first)
+  assert.equal(notebook.current, 0)
+})

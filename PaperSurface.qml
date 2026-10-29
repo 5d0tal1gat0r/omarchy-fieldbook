@@ -159,9 +159,30 @@ Item {
         selectedObjectId = ""
         var base = draftDocument || document
         var trimmed = String(text).replace(/\s+$/, "")
-        commit(trimmed === ""
-            ? DocumentModel.deleteObject(base, id)
-            : DocumentModel.updateText(base, id, trimmed, height))
+        var object = DocumentModel.findObject(base, id)
+        var updated = object && object.type === "sticky"
+            ? DocumentModel.updateSticky(base, id, trimmed)
+            : DocumentModel.updateText(base, id, trimmed, height)
+        commit(trimmed === "" ? DocumentModel.deleteObject(base, id) : updated)
+    }
+
+    function addStickyNote() {
+        finishEditing()
+        var next = DocumentModel.addSticky(document, (width - 220) / 2, (height - 140) / 2, "", "yellow")
+        if (next === document)
+            return false
+        draftDocument = next
+        beginEditing(next.objects[next.objects.length - 1].id)
+        return true
+    }
+
+    function addImageCard(path) {
+        finishEditing()
+        var next = DocumentModel.addImage(document, (width - 280) / 2, (height - 200) / 2, path, 280, 200)
+        if (next === document)
+            return false
+        commit(next)
+        return true
     }
 
     function eraseAt(x, y) {
@@ -176,7 +197,8 @@ Item {
                     continue
                 var segments = Geometry.splitStroke(object.points, center, radius)
                 next = DocumentModel.replaceStrokeSegments(next, object.id, segments)
-            } else if (object.type === "text" && Geometry.rectTouches(object, center, eraserRadius)) {
+            } else if ((object.type === "text" || object.type === "sticky" || object.type === "image")
+                       && Geometry.rectTouches(object, center, eraserRadius)) {
                 next = DocumentModel.deleteObject(next, object.id)
             }
         }
@@ -662,6 +684,55 @@ Item {
 
         Repeater {
             model: root.shownDocument && root.shownDocument.objects
+                ? root.shownDocument.objects.filter(function(object) { return object.type === "image" })
+                : []
+
+            ImageNote {
+                required property var modelData
+                objectData: modelData
+                selected: modelData.id === root.selectedObjectId
+                selectable: root.currentTool === "select"
+                onSelectedRequested: function(id) {
+                    root.finishEditing()
+                    root.selectedObjectId = id
+                }
+                onMoveRequested: function(id, x, y) {
+                    root.commit(DocumentModel.moveBox(root.document, id, x, y))
+                }
+            }
+        }
+
+        Repeater {
+            model: root.shownDocument && root.shownDocument.objects
+                ? root.shownDocument.objects.filter(function(object) { return object.type === "sticky" })
+                : []
+
+            StickyNote {
+                required property var modelData
+                objectData: modelData
+                selected: modelData.id === root.selectedObjectId
+                editing: modelData.id === root.editingObjectId
+                selectable: root.currentTool === "select"
+                editable: root.currentTool === "select"
+                onSelectedRequested: function(id) {
+                    root.finishEditing()
+                    root.selectedObjectId = id
+                }
+                onEditRequested: function(id) {
+                    root.beginEditing(id)
+                }
+                onCommitRequested: function(id, text) {
+                    root.commitText(id, text, 0)
+                }
+                onCancelRequested: root.cancelEditing()
+                onMoveRequested: function(id, x, y) {
+                    root.commit(DocumentModel.moveBox(root.document, id, x, y))
+                }
+            }
+        }
+
+        Repeater {
+            model: root.shownDocument && root.shownDocument.objects
                 ? root.shownDocument.objects.filter(function(object) { return object.type === "text" })
                 : []
 
@@ -924,7 +995,7 @@ Item {
             spacing: 6
 
             Text {
-                text: "FIELD NOTES"
+                text: "FIELD BOOK"
                 color: "#805b5349"
                 font.family: "monospace"
                 font.pixelSize: 9

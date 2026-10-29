@@ -137,6 +137,40 @@ test("creates, edits, and moves a bounded text note", () => {
   assert.equal(moved.objects[0].y, 520)
 })
 
+test("creates, edits, moves, and reloads sticky notes and local image cards", () => {
+  const empty = Model.createDocument(760, 560)
+  const sticky = Model.addSticky(empty, 700, 520, "Remember this", "pink")
+  const edited = Model.updateSticky(sticky, "sticky-1", "Updated")
+  const moved = Model.translateObject(edited, "sticky-1", 30, 30)
+  const image = Model.addImage(moved, 500, 400, " /tmp/reference.png\n", 320, 240)
+  const imageMoved = Model.translateObject(image, "image-1", 100, 100)
+  const restored = Model.sanitizeNotebook(JSON.parse(Model.serialize([imageMoved], 0, {})), 760, 560)
+
+  assert.equal(sticky.objects[0].type, "sticky")
+  assert.equal(sticky.objects[0].color, "pink")
+  assert.equal(edited.objects[0].text, "Updated")
+  assert.deepEqual([moved.objects[0].x, moved.objects[0].y], [540, 420])
+  assert.equal(imageMoved.objects[1].path, "/tmp/reference.png")
+  assert.deepEqual([imageMoved.objects[1].x, imageMoved.objects[1].y], [440, 320])
+  assert.deepEqual(restored.documents[0].objects, imageMoved.objects)
+})
+
+test("sanitizes invalid media objects without allowing unsafe ids or paths", () => {
+  const restored = Model.sanitizeNotebook({
+    schemaVersion: 2,
+    sheets: [{ objects: [
+      { id: "sticky-1", type: "sticky", x: 1, y: 2, width: 220, height: 140, text: "ok", color: "bad" },
+      { id: "image-1", type: "image", x: 3, y: 4, width: 240, height: 160, path: "/tmp/a.png\nignored" },
+      { id: "image-1", type: "image", x: 3, y: 4, path: "   " },
+      { id: "<script>", type: "image", path: "/tmp/b.png" }
+    ] }]
+  }, 760, 560)
+  assert.deepEqual(restored.documents[0].objects.map(object => object.id), ["sticky-1", "image-1", "image-2"])
+  assert.equal(restored.documents[0].objects[0].color, "yellow")
+  assert.equal(restored.documents[0].objects[1].path, "/tmp/a.pngignored")
+  assert.equal(restored.documents[0].objects[2].path, "/tmp/b.png")
+})
+
 test("edits share untouched objects and no-op edits return the same document", () => {
   const base = Model.addText(Model.addStroke(Model.createDocument(760, 560), [[1, 1], [9, 9]], 2), 10, 10, "a")
   const edited = Model.updateText(base, "text-1", "b", 28)
@@ -279,6 +313,33 @@ test("sheets carry a one-line title that is saved, undoable and used for file na
   const hostile = Model.sanitizeNotebook({ schemaVersion: 2, current: 1, sheets: [
     { title: { evil: true }, objects: [] }, { title: "a\nb", objects: [] }] }, 760, 560)
   assert.deepEqual(hostile.documents.map(document => document.title), ["a b"], "an untitled, empty, unopened sheet is dropped")
+})
+
+test("round-trips chapters and page ids in the version 3 notebook format", () => {
+  const first = Model.addStroke(Model.createDocument(760, 560), [[1, 1], [2, 2]], 2)
+  const second = Model.setTitle(Model.createDocument(760, 560), "Second page")
+  const meta = {
+    pageIds: ["page-home", "page-second"],
+    projects: [
+      { id: "project-notes", title: "Notes", pageIds: ["page-home", "page-second"] }
+    ]
+  }
+  const restored = Model.sanitizeNotebook(JSON.parse(Model.serialize([first, second], 1, {}, {}, meta)), 760, 560)
+  assert.deepEqual(restored.pageIds, meta.pageIds)
+  assert.deepEqual(restored.projects, meta.projects)
+  assert.equal(restored.documents[1].title, "Second page")
+})
+
+test("legacy Field Notes files receive one chapter without changing their sheets", () => {
+  const restored = Model.sanitizeNotebook({
+    schemaVersion: 2,
+    current: 0,
+    sheets: [{ title: "Old page", objects: [] }]
+  }, 760, 560)
+  assert.equal(restored.pageIds.length, 1)
+  assert.equal(restored.projects.length, 1)
+  assert.equal(restored.projects[0].pageIds[0], restored.pageIds[0])
+  assert.equal(restored.documents[0].title, "Old page")
 })
 
 test("sheets resize between three sizes without cutting off or rescaling content", () => {

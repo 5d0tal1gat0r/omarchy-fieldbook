@@ -7,6 +7,7 @@ var MAX_TOTAL_POINTS = 250000
 var MAX_TEXT = 4096
 var MAX_TITLE = 60
 var MAX_SHEETS = 32
+var MAX_PROJECTS = 32
 var TOOLS = ["select", "pen", "eraser", "text"]
 var TOOLBAR_SIDES = ["right", "left", "top", "bottom"]
 // Ruling printed on a sheet, in the order clicking the paper label cycles through them.
@@ -98,7 +99,7 @@ function contentExtent(document) {
     var extent = { width: 0, height: 0 }
     for (var i = 0; i < document.objects.length; i++) {
         var object = document.objects[i]
-        if (object.type === "text") {
+        if (object.type === "text" || object.type === "sticky" || object.type === "image") {
             extent.width = Math.max(extent.width, object.x + object.width)
             extent.height = Math.max(extent.height, object.y + object.height)
         } else if (object.type === "stroke") {
@@ -288,6 +289,68 @@ function updateText(document, id, text, height) {
     return replaceAt(document, index, object)
 }
 
+function addSticky(document, x, y, text, color) {
+    if (document.objects.length >= MAX_OBJECTS)
+        return document
+    var width = 220
+    var height = 140
+    return withObjects(document, document.objects.concat([{
+        id: nextId(document, "sticky"),
+        type: "sticky",
+        x: clamp(x, 0, Math.max(0, document.page.width - width)),
+        y: clamp(y, 0, Math.max(0, document.page.height - height)),
+        width: width,
+        height: height,
+        text: String(text || "").slice(0, MAX_TEXT),
+        size: 16,
+        color: ["yellow", "pink", "blue", "green"].indexOf(color) >= 0 ? color : "yellow"
+    }]))
+}
+
+function updateSticky(document, id, text) {
+    var index = indexOf(document, id)
+    if (index < 0 || document.objects[index].type !== "sticky")
+        return document
+    var source = document.objects[index]
+    var nextText = String(text || "").slice(0, MAX_TEXT)
+    return nextText === source.text ? document : replaceAt(document, index, Object.assign({}, source, { text: nextText }))
+}
+
+function moveBox(document, id, x, y) {
+    var index = indexOf(document, id)
+    if (index < 0 || ["text", "sticky", "image"].indexOf(document.objects[index].type) < 0)
+        return document
+    var source = document.objects[index]
+    var nextX = clamp(x, 0, Math.max(0, document.page.width - source.width))
+    var nextY = clamp(y, 0, Math.max(0, document.page.height - source.height))
+    if (nextX === source.x && nextY === source.y)
+        return document
+    return replaceAt(document, index, Object.assign({}, source, { x: nextX, y: nextY }))
+}
+
+function cleanImagePath(path) {
+    return String(path || "").replace(/[\r\n\0]/g, "").trim().slice(0, MAX_PATH)
+}
+
+function addImage(document, x, y, path, width, height) {
+    if (document.objects.length >= MAX_OBJECTS)
+        return document
+    var cleanPath = cleanImagePath(path)
+    if (!cleanPath)
+        return document
+    var imageWidth = Math.round(clamp(width || 280, 64, document.page.width))
+    var imageHeight = Math.round(clamp(height || 200, 64, document.page.height))
+    return withObjects(document, document.objects.concat([{
+        id: nextId(document, "image"),
+        type: "image",
+        x: clamp(x, 0, Math.max(0, document.page.width - imageWidth)),
+        y: clamp(y, 0, Math.max(0, document.page.height - imageHeight)),
+        width: imageWidth,
+        height: imageHeight,
+        path: cleanPath
+    }]))
+}
+
 function moveText(document, id, x, y) {
     var index = indexOf(document, id)
     if (index < 0 || document.objects[index].type !== "text")
@@ -307,8 +370,8 @@ function translateObject(document, id, dx, dy) {
     if (index < 0)
         return document
     var source = document.objects[index]
-    if (source.type === "text")
-        return moveText(document, id, source.x + Number(dx), source.y + Number(dy))
+    if (source.type === "text" || source.type === "sticky" || source.type === "image")
+        return moveBox(document, id, source.x + Number(dx), source.y + Number(dy))
     if (source.type !== "stroke" || source.points.length === 0)
         return document
 
@@ -364,10 +427,36 @@ function sanitizeObjects(rawObjects, document, budget) {
                 text: source.text.slice(0, MAX_TEXT),
                 size: clamp(source.size || 16, 8, 48)
             }
+        } else if (source.type === "sticky" && typeof source.text === "string") {
+            var stickyWidth = Math.round(clamp(source.width || 220, 120, width))
+            var stickyHeight = Math.round(clamp(source.height || 140, 80, height))
+            object = {
+                id: id,
+                type: "sticky",
+                x: clamp(source.x, 0, width - stickyWidth),
+                y: clamp(source.y, 0, height - stickyHeight),
+                width: stickyWidth,
+                height: stickyHeight,
+                text: source.text.slice(0, MAX_TEXT),
+                size: clamp(source.size || 16, 8, 48),
+                color: ["yellow", "pink", "blue", "green"].indexOf(source.color) >= 0 ? source.color : "yellow"
+            }
+        } else if (source.type === "image" && typeof source.path === "string" && source.path.trim() !== "") {
+            var imageWidth = Math.round(clamp(source.width || 280, 64, width))
+            var imageHeight = Math.round(clamp(source.height || 200, 64, height))
+            object = {
+                id: id,
+                type: "image",
+                x: clamp(source.x, 0, width - imageWidth),
+                y: clamp(source.y, 0, height - imageHeight),
+                width: imageWidth,
+                height: imageHeight,
+                path: cleanImagePath(source.path)
+            }
         }
         if (!object)
             continue
-        if (!/^(stroke|text)-\d+$/.test(id) || id.indexOf(object.type) !== 0 || seen[id])
+        if (!/^(stroke|text|sticky|image)-\d+$/.test(id) || id.indexOf(object.type) !== 0 || seen[id])
             object.id = ""
         else
             seen[id] = true
@@ -452,7 +541,72 @@ function sanitizeUi(raw) {
     return ui
 }
 
-// Accepts untrusted saved JSON (a single-sheet version 1 file or a version 2 notebook) and
+var PROJECT_ID = /^project-[A-Za-z0-9_-]+$/
+var PAGE_ID = /^page-[A-Za-z0-9_-]+$/
+
+function cleanProjectTitle(title) {
+    return String(title || "").replace(/\s+/g, " ").trim().slice(0, MAX_TITLE) || "Chapter"
+}
+
+function generatedId(prefix, values) {
+    var highest = 0
+    var head = prefix + "-"
+    values.forEach(function(value) {
+        var id = String(value || "")
+        if (id.indexOf(head) === 0)
+            highest = Math.max(highest, Number(id.slice(head.length)) || 0)
+    })
+    return prefix + "-" + (highest + 1)
+}
+
+function sanitizePageIds(raw, count) {
+    var ids = []
+    var seen = {}
+    for (var i = 0; i < count; i++) {
+        var id = Array.isArray(raw) ? String(raw[i] || "") : ""
+        if (!PAGE_ID.test(id) || seen[id])
+            id = generatedId("page", ids)
+        seen[id] = true
+        ids.push(id)
+    }
+    return ids
+}
+
+function sanitizeProjects(raw, pageIds) {
+    var projects = []
+    var usedProjects = {}
+    var assigned = {}
+    var source = Array.isArray(raw) ? raw : []
+    for (var i = 0; i < source.length && projects.length < MAX_PROJECTS; i++) {
+        var candidate = source[i]
+        if (!candidate || typeof candidate !== "object")
+            continue
+        var id = String(candidate.id || "")
+        if (!PROJECT_ID.test(id) || usedProjects[id])
+            id = generatedId("project", projects.map(function(project) { return project.id }))
+        usedProjects[id] = true
+        var project = { id: id, title: cleanProjectTitle(candidate.title), pageIds: [] }
+        var rawPages = Array.isArray(candidate.pageIds) ? candidate.pageIds : []
+        for (var j = 0; j < rawPages.length; j++) {
+            var pageId = String(rawPages[j] || "")
+            if (pageIds.indexOf(pageId) >= 0 && !assigned[pageId]) {
+                assigned[pageId] = true
+                project.pageIds.push(pageId)
+            }
+        }
+        projects.push(project)
+    }
+    if (projects.length === 0)
+        projects.push({ id: "project-1", title: "Field Notes", pageIds: [] })
+    for (var k = 0; k < pageIds.length; k++) {
+        if (!assigned[pageIds[k]])
+            projects[0].pageIds.push(pageIds[k])
+    }
+    return projects
+}
+
+// Accepts untrusted saved JSON (a single-sheet version 1 file, a version 2 Field Notes notebook,
+// or a version 3 Fieldbook notebook) and
 // returns { documents, current, ui } with every sheet bounded and valid, or null when the
 // data is not a Field Notes file at all. Blank sheets are kept only if they are open.
 function sanitizeNotebook(raw, width, height) {
@@ -465,11 +619,16 @@ function sanitizeNotebook(raw, width, height) {
     } else if (raw.schemaVersion === 2 && Array.isArray(raw.sheets)) {
         rawSheets = raw.sheets
         current = Math.floor(Number(raw.current)) || 0
+    } else if (raw.schemaVersion === 3 && Array.isArray(raw.sheets)
+               && Array.isArray(raw.pageIds) && Array.isArray(raw.projects)) {
+        rawSheets = raw.sheets
+        current = Math.floor(Number(raw.current)) || 0
     } else {
         return null
     }
 
     var documents = []
+    var pageIds = []
     var open = 0
     var budget = { points: MAX_TOTAL_POINTS }
     for (var i = 0; i < rawSheets.length && documents.length < MAX_SHEETS; i++) {
@@ -484,13 +643,18 @@ function sanitizeNotebook(raw, width, height) {
         if (i === current)
             open = documents.length
         documents.push(document)
+        var pageId = raw.schemaVersion === 3 && Array.isArray(raw.pageIds) ? String(raw.pageIds[i] || "") : ""
+        pageIds.push(pageId)
     }
     if (i < rawSheets.length)
         budget.trimmed = true
     if (documents.length === 0)
         documents.push(createDocument(width, height))
+    pageIds = sanitizePageIds(pageIds, documents.length)
+    var projects = sanitizeProjects(raw.schemaVersion === 3 ? raw.projects : null, pageIds)
     // trimmed: the file held more than these limits allow, so saving now would lose the rest.
-    return { documents: documents, current: open, ui: sanitizeUi(raw.ui), settings: sanitizeSettings(raw.settings),
+    return { documents: documents, current: open, pageIds: pageIds, projects: projects,
+             ui: sanitizeUi(raw.ui), settings: sanitizeSettings(raw.settings),
              trimmed: budget.trimmed === true }
 }
 
@@ -507,7 +671,7 @@ function overLimits(documents) {
             if (objects[j].type === "stroke") {
                 points += objects[j].points.length
                 over += Math.max(0, objects[j].points.length - MAX_STROKE_POINTS)
-            } else if (objects[j].type === "text") {
+            } else if (objects[j].type === "text" || objects[j].type === "sticky") {
                 over += Math.max(0, String(objects[j].text).length - MAX_TEXT)
             }
         }
@@ -528,11 +692,16 @@ function totalPoints(documents) {
     return total
 }
 
-function serialize(documents, current, ui, settings) {
+function serialize(documents, current, ui, settings, metadata) {
+    metadata = metadata || {}
+    var pageIds = sanitizePageIds(metadata.pageIds, documents.length)
+    var projects = sanitizeProjects(metadata.projects, pageIds)
     return JSON.stringify({
-        schemaVersion: 2,
+        schemaVersion: 3,
         page: documents[0].page,
         current: current,
+        pageIds: pageIds,
+        projects: projects,
         sheets: documents.map(function(document) {
             return { title: document.title || "", size: sizeName(document), paper: document.paper, objects: document.objects }
         }),
@@ -544,6 +713,7 @@ function serialize(documents, current, ui, settings) {
 if (typeof module !== "undefined")
     module.exports = {
         MAX_SHEETS: MAX_SHEETS,
+        MAX_PROJECTS: MAX_PROJECTS,
         MAX_TOTAL_POINTS: MAX_TOTAL_POINTS,
         MAX_STROKE_POINTS: MAX_STROKE_POINTS,
         totalPoints: totalPoints,
@@ -557,6 +727,8 @@ if (typeof module !== "undefined")
         defaultSettings: defaultSettings,
         sanitizeSettings: sanitizeSettings,
         sanitizeBoards: sanitizeBoards,
+        sanitizePageIds: sanitizePageIds,
+        sanitizeProjects: sanitizeProjects,
         isScreenName: isScreenName,
         MAX_SCREENS: MAX_SCREENS,
         SIZE_ORDER: SIZE_ORDER,
@@ -578,6 +750,10 @@ if (typeof module !== "undefined")
         addText: addText,
         updateText: updateText,
         moveText: moveText,
+        addSticky: addSticky,
+        updateSticky: updateSticky,
+        addImage: addImage,
+        moveBox: moveBox,
         translateObject: translateObject,
         sanitizeNotebook: sanitizeNotebook,
         serialize: serialize

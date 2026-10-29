@@ -1,0 +1,40 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 1 ]; then
+  printf '%s\n' "usage: fieldbook-paste-image TARGET" >&2
+  exit 2
+fi
+
+target=$1
+asset_root=${HOME}/.config/omarchy/fieldbook-assets/
+case "$target" in
+  "$asset_root"*) ;;
+  *) printf '%s\n' "refusing to write outside Fieldbook assets" >&2; exit 3 ;;
+esac
+
+if ! command -v wl-paste >/dev/null 2>&1; then
+  printf '%s\n' "wl-paste is required for image paste" >&2
+  exit 4
+fi
+
+mime=""
+for candidate in image/png image/jpeg image/webp image/gif image/bmp; do
+  if wl-paste --list-types 2>/dev/null | grep -Fxq "$candidate"; then
+    mime=$candidate
+    break
+  fi
+done
+
+if [ -z "$mime" ]; then
+  printf '%s\n' "clipboard does not contain a supported image" >&2
+  exit 5
+fi
+
+mkdir -p "$asset_root"
+tmp=$(mktemp "$asset_root/.paste.XXXXXX")
+trap 'rm -f "$tmp"' EXIT INT TERM
+wl-paste --no-newline --type "$mime" > "$tmp"
+mv -f "$tmp" "$target"
+trap - EXIT INT TERM
+printf '%s\n' "$target"

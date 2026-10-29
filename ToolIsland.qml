@@ -55,6 +55,8 @@ Item {
     signal penWidthRequested(real width)
     signal sheetRequested(int index)
     signal newSheetRequested()
+    signal stickyRequested()
+    signal imageRequested()
     signal copyImageRequested()
     signal settingsRequested()
     signal closeRequested()
@@ -215,6 +217,18 @@ Item {
             shortcut: "T"
             selected: root.currentTool === "text"
             onActivated: root.toolSelected("text")
+        }
+        Button {
+            text: "Sticky note"
+            icon: "󰗄"
+            shortcut: "K"
+            onActivated: root.stickyRequested()
+        }
+        Button {
+            text: "Paste image"
+            icon: "󰋩"
+            shortcut: "I"
+            onActivated: root.imageRequested()
         }
 
         Divider {}

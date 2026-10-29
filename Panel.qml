@@ -32,9 +32,16 @@ Item {
     property var notebook: Notebook.create([History.create(DocumentModel.createSheet("medium"))], 0)
     readonly property var historyState: notebook.sheets[notebook.current]
     readonly property var currentDocument: historyState.present
+    readonly property string currentPageId: notebook.pageIds[notebook.current] || ""
+    readonly property var pageTitles: {
+        var titles = {}
+        for (var i = 0; i < notebook.pageIds.length; i++)
+            titles[notebook.pageIds[i]] = notebook.sheets[i].present.title || "Untitled page"
+        return titles
+    }
     readonly property bool canUndo: historyState.past.length > 0
     readonly property bool canRedo: historyState.future.length > 0
-    readonly property string stateDir: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/field-notes"
+    readonly property string stateDir: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/fieldbook"
     // Nothing is written until the saved sheet has been read, so a slow or failed load
     // can never overwrite it with an empty page.
     property bool stateReady: false
@@ -43,7 +50,8 @@ Item {
     readonly property int maxStateBytes: 16 * 1024 * 1024
     property string saveStatus: "LOADING"
     readonly property string home: Quickshell.env("HOME")
-    readonly property string defaultExportDir: (Quickshell.env("XDG_PICTURES_DIR") || home + "/Pictures") + "/field-notes"
+    readonly property string defaultExportDir: (Quickshell.env("XDG_PICTURES_DIR") || home + "/Pictures") + "/fieldbook"
+    readonly property string pasteScript: String(Qt.resolvedUrl("bin/fieldbook-paste-image")).replace(/^file:\/\//, "")
     // User settings (DocumentModel.defaultSettings), saved with the notes.
     property var settings: DocumentModel.defaultSettings()
     property bool settingsOpen: false
@@ -70,6 +78,7 @@ Item {
         return area
     }
     property string pendingExport: ""
+    property string pendingImagePath: ""
     // What the export in progress puts on the clipboard: "path" or "image".
     property string pendingMode: "path"
     // The copy of the notes file made before saving over it: "", "copying", "done" or "failed".
@@ -149,9 +158,58 @@ Item {
             DocumentModel.createSheet(DocumentModel.sizeName(currentDocument), currentDocument.paper))))
     }
 
+    function addProject(title) {
+        leaveSheet()
+        var next = Notebook.addProject(notebook, History.create(
+            DocumentModel.createSheet(DocumentModel.sizeName(currentDocument), currentDocument.paper)), title)
+        if (next === notebook)
+            return false
+        setNotebook(next)
+        scheduleSave()
+        return true
+    }
+
+    function selectProject(projectId) {
+        leaveSheet()
+        setNotebook(Notebook.selectProject(notebook, projectId))
+    }
+
+    function selectPage(pageId) {
+        var index = notebook.pageIds.indexOf(pageId)
+        if (index < 0)
+            return
+        leaveSheet()
+        setNotebook(Notebook.select(notebook, index))
+    }
+
+    function renameProject(projectId, title) {
+        var next = Notebook.renameProject(notebook, projectId, title)
+        if (next !== notebook) {
+            notebook = next
+            scheduleSave()
+        }
+    }
+
     function selectTool(tool) {
         focusKeys()
         currentTool = tool
+    }
+
+    function addStickyNote() {
+        selectTool("select")
+        focusKeys()
+        if (!paper.addStickyNote())
+            paper.refuse("The notebook is full")
+    }
+
+    function pasteImage() {
+        selectTool("select")
+        focusKeys()
+        if (pasteImageProcess.running)
+            return
+        pendingImagePath = home + "/.config/omarchy/fieldbook-assets/image-" + Date.now() + ".png"
+        pasteImageProcess.command = [pasteScript, pendingImagePath]
+        pasteImageProcess.running = true
     }
 
     // Undo and redo can bring back strokes too (undoing a Clear restores a whole sheet).
@@ -288,7 +346,7 @@ Item {
         console.info("Field Notes: opening export folder " + exportDir)
         Quickshell.execDetached(["bash", "-lc", "exec \"$@\"", "bash", "sh", "-c",
             "mkdir -p -- \"$1\" || exit 1; command -v gio >/dev/null && exec gio open \"$1\"; exec xdg-open \"$1\"",
-            "field-notes", exportDir])
+            "fieldbook", exportDir])
     }
 
     function setPenWidth(width) {
@@ -328,7 +386,10 @@ Item {
             boardX: positionInitialized ? Math.round(board.x) : null,
             boardY: positionInitialized ? Math.round(board.y) : null,
             boards: boardPositions
-        }, settings))
+        }, settings, {
+            pageIds: notebook.pageIds,
+            projects: notebook.projects
+        }))
     }
 
     // Copies the notes file aside (backupCorrupt or backupTrimmed) before anything is saved over
@@ -368,7 +429,7 @@ Item {
         if (restored) {
             notebook = Notebook.create(restored.documents.map(function(document) {
                 return History.create(document)
-            }), restored.current)
+            }), restored.current, restored.pageIds, restored.projects)
             currentTool = restored.ui.tool
             penWidth = restored.ui.penWidth
             toolbarSide = restored.ui.toolbar
@@ -517,7 +578,7 @@ Item {
 
     function requestClose() {
         if (shell && typeof shell.hide === "function")
-            shell.hide("jobo.field-notes")
+            shell.hide("io.github.5d0tal1gat0r.fieldbook")
         else
             close()
     }
@@ -648,22 +709,22 @@ Item {
         }
     }
 
-    // Scripting: `omarchy-shell jobo.field-notes <method> [args]`, for demos, tests and
+    // Scripting: `omarchy-shell io.github.5d0tal1gat0r.fieldbook <method> [args]`, for demos, tests and
     // automation. Showing and hiding go through the shell so the bar icon stays in step.
     // Actions answer "ok" or "error: <reason>"; sheets are numbered from 1 as on the paper.
     IpcHandler {
-        target: "jobo.field-notes"
+        target: "io.github.5d0tal1gat0r.fieldbook"
 
         function status(): string { return JSON.stringify(root.scriptStatus()) }
 
         function open(): string {
-            return root.shell && typeof root.shell.summon === "function" && root.shell.summon("jobo.field-notes", "{}") ? "ok" : "error: the shell did not open the panel"
+            return root.shell && typeof root.shell.summon === "function" && root.shell.summon("io.github.5d0tal1gat0r.fieldbook", "{}") ? "ok" : "error: the shell did not open the panel"
         }
 
         function openOn(screen: string): string {
             if (!DocumentModel.isScreenName(screen) || !root.screenNamed(screen))
                 return "error: no screen named " + screen
-            return root.shell && typeof root.shell.summon === "function" && root.shell.summon("jobo.field-notes", JSON.stringify({ screen: screen })) ? "ok" : "error: the shell did not open the panel"
+            return root.shell && typeof root.shell.summon === "function" && root.shell.summon("io.github.5d0tal1gat0r.fieldbook", JSON.stringify({ screen: screen })) ? "ok" : "error: the shell did not open the panel"
         }
 
         function close(): string {
@@ -771,6 +832,18 @@ Item {
         }
     }
 
+    Process {
+        id: pasteImageProcess
+
+        onExited: function(exitCode) {
+            if (exitCode === 0 && paper.addImageCard(root.pendingImagePath))
+                root.scheduleSave()
+            else
+                paper.refuse("Clipboard has no supported image")
+            root.pendingImagePath = ""
+        }
+    }
+
     // Reads of the notes file fail closed: only a regular file (not a symlink, pipe or
     // folder) of at most maxStateBytes is opened. Otherwise nothing is read and nothing is
     // ever written over it. Exit codes: 0 safe, 3 missing (start fresh), 4 not a regular
@@ -780,7 +853,7 @@ Item {
 
         command: ["sh", "-c",
             "if [ -L \"$1\" ]; then exit 4; fi; [ -e \"$1\" ] || exit 3; [ -f \"$1\" ] || exit 4; size=$(stat -c %s -- \"$1\") || exit 5; [ \"$size\" -le \"$2\" ] || exit 6",
-            "field-notes", root.stateDir + "/notes.json", String(root.maxStateBytes)]
+            "fieldbook", root.stateDir + "/notes.json", String(root.maxStateBytes)]
         onExited: function(exitCode) {
             if (exitCode === 0 || exitCode === 3) {
                 root.stateChecked = true
@@ -808,7 +881,7 @@ Item {
                     return
                 }
                 copyPath.command = root.pendingMode === "image"
-                    ? ["sh", "-c", "exec wl-copy --type image/png < \"$1\"", "field-notes", root.pendingExport]
+                    ? ["sh", "-c", "exec wl-copy --type image/png < \"$1\"", "fieldbook", root.pendingExport]
                     : ["wl-copy", root.pendingExport]
                 copyPath.running = true
             })
@@ -899,7 +972,7 @@ Item {
         surfaceFormat.opaque: false
         exclusionMode: ExclusionMode.Ignore
 
-        WlrLayershell.namespace: "jobo-field-notes"
+        WlrLayershell.namespace: "io.github.5d0tal1gat0r.fieldbook"
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
@@ -935,6 +1008,12 @@ Item {
                 width: dragClip.width * board.scale
                 height: dragClip.height * board.scale
             }
+            Region {
+                x: projectRail.x
+                y: projectRail.y
+                width: projectRail.width
+                height: projectRail.height
+            }
         }
 
         onWidthChanged: root.ensureBoardPosition()
@@ -952,6 +1031,35 @@ Item {
                 id: keySink
 
                 focus: true
+            }
+
+            ProjectRail {
+                id: projectRail
+
+                x: Math.max(16, board.x - width - 16)
+                y: Math.max(16, board.y + 24)
+                width: implicitWidth
+                height: Math.min(board.height, Math.max(240, surface.height - 32))
+                z: 35
+                theme: root.theme
+                projects: root.notebook.projects
+                pageTitles: root.pageTitles
+                currentProjectId: root.notebook.currentProjectId
+                currentPageId: root.currentPageId
+                onProjectSelected: function(projectId) {
+                    root.selectProject(projectId)
+                }
+                onPageSelected: function(pageId) {
+                    root.selectPage(pageId)
+                }
+                onNewProjectRequested: root.addProject("New chapter")
+                onNewPageRequested: function(projectId) {
+                    root.selectProject(projectId)
+                    root.addSheet()
+                }
+                onProjectTitleCommitted: function(projectId, title) {
+                    root.renameProject(projectId, title)
+                }
             }
 
             Keys.onPressed: function(event) {
@@ -1134,6 +1242,8 @@ Item {
                         root.selectSheet(index)
                     }
                     onNewSheetRequested: root.addSheet()
+                    onStickyRequested: root.addStickyNote()
+                    onImageRequested: root.pasteImage()
                     onCopyImageRequested: root.copyImagePath()
                     onSettingsRequested: root.toggleSettings()
                     copyMode: root.settings.clipboard

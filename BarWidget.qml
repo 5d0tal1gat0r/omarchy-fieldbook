@@ -21,10 +21,10 @@ Item {
             payload.screen = screen
         var json = JSON.stringify(payload)
         var api = root.bar ? root.bar.shell : null
-        if (api && typeof api.summon === "function" && api.summon("jobo.field-notes", json) === true)
+        if (api && typeof api.summon === "function" && api.summon("io.github.5d0tal1gat0r.fieldbook", json) === true)
             return
         if (root.bar)
-            root.bar.run("omarchy-shell shell summon jobo.field-notes '" + json + "'")
+            root.bar.run("omarchy-shell shell summon io.github.5d0tal1gat0r.fieldbook '" + json + "'")
     }
 
     BarIconButton {
@@ -34,7 +34,7 @@ Item {
         bar: root.bar
         text: "󰈙"
         fontFamily: "JetBrainsMono Nerd Font"
-        tooltipText: "Field Notes (right-click for settings)"
+        tooltipText: "Fieldbook (right-click for settings)"
         slotSize: Style.bar.iconSlot
 
         // Left click toggles the notes here (or brings them over from another monitor);
