@@ -1,18 +1,42 @@
 # Fieldbook
 
-![Fieldbook on an Omarchy desktop](preview.png)
-
 A floating field notebook for Omarchy: draw with a mouse or tablet, type notes, keep
 chapters with ordered pages, and export a page as an image. Fieldbook is a downstream
 fork of [OldJobobo's Field Notes](https://github.com/OldJobobo/field-notes), keeping its
 paper, pen, text, undo, autosave, export, and layer-shell behavior while adding notebook
 organization.
 
+Fieldbook is independently maintained and is not an official Field Notes release.
+
+## Requirements
+
+- Omarchy with the Quattro shell plugin system (`omarchy plugin`)
+- `wl-clipboard` (`wl-copy` and `wl-paste`) for exporting and pasting images
+- `gio` or `xdg-open` to open the export folder from Fieldbook
+
+The plugin runs inside the Omarchy shell with your user permissions. It stores notebook
+state locally and does not use a network service.
+
 ## Install
 
 ```sh
 omarchy plugin add https://github.com/5d0tal1gat0r/omarchy-fieldbook.git
 omarchy plugin enable io.github.5d0tal1gat0r.fieldbook
+```
+
+## Remove
+
+```sh
+omarchy plugin remove io.github.5d0tal1gat0r.fieldbook
+```
+
+Removing the plugin does not delete your notebook or pasted images. Delete them separately
+only if you no longer need them:
+
+```text
+~/.local/state/fieldbook/
+~/.config/omarchy/fieldbook-assets/
+~/Pictures/fieldbook/
 ```
 
 To bind it in `~/.config/hypr/bindings.lua`:
@@ -119,4 +143,5 @@ organization layer can be verified independently.
 ## Attribution and license
 
 Fieldbook is MIT licensed; see [LICENSE](LICENSE). It is based on OldJobobo's Field Notes,
-also MIT licensed. The upstream source and attribution are preserved in this repository.
+also MIT licensed. The upstream source and attribution are preserved in this repository;
+see [UPSTREAM.md](UPSTREAM.md) for the base version and the main differences.

@@ -1,0 +1,6 @@
+*.qmlc
+*.jsc
+.cache/
+node_modules/
+coverage/
+*.log
